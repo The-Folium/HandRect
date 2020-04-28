@@ -1,0 +1,4 @@
+1. Starting point - should be randomized
+2. Speed optimization - much faster movement, segment connection
+3. Thickness control
+4. Resistance control
