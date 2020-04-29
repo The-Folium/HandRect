@@ -1,32 +1,32 @@
 //General Settings
-#DEBUG_MODE						1								//1 - on, 2 - off. While in debug mode this application also renders some additional info
-#FILE_OUTPUT					0								//1 - appliction will produce SAMPLE_NUMBER of samples and will store them into the files + *.json will also be generated
+#DEBUG_MODE						0								//1 - on, 2 - off. While in debug mode this application also renders some additional info
+#FILE_OUTPUT					1								//1 - appliction will produce SAMPLE_NUMBER of samples and will store them into the files + *.json will also be generated
 #JSON_FILENAME					info
-#PICTURE_PREFIX					sample
-#SAMPLE_NUMBER					100
+#SAMPLE_FILENAME_PREFIX			sample
+#SAMPLE_NUMBER					10
+#PADDING						5								//outline padding
 
 
 //Engine Settings
+#START_VELOCITY_ANGLE_SPAN		0.15							//starting velocity will be misdirected in the angle range of [-START_VELOCITY_ANGLE_SPAN, START_VELOCITY_ANGLE_SPAN]
+#START_VELOCITY_RANGE			4.0		7.0						//start velocity absolute value
 #VELOCITY_MULTIPLIER_RANGE		0.001	0.01
-#MOVEMENT_RESISTANCE_RANGE		0.88	0.92
+#MOVEMENT_RESISTANCE_RANGE		0.88	0.89
 #TARGET_REACH_ACCURACY_RANGE	18.0	22.0
 #DEVIATION_PROBABILITY			0.004
-#DEVIATION_COEFFICIENT			
+#DEVIATION_PARAMETER			0.1
 
 
 //Render Settings
 #THICKNESS						2.0
+#BACKGROUND_COLOR_RGB			255		255		255
+#INK_COLOR_RGB					234		23		16
 
 
 //Area Settings
 #TOP_LEFT						50.0	50.0	60.0	60.0	//coordinates of the rectangle area, containing top-left corner of R_SHAPE (x1, y1, x2, y2)
 #BOTTOM_RIGHT					400.0	100.0	450.0	150.0	//coordinates of the rectangle area, containing top-left corner of R_SHAPE (x1, y1, x2, y2)
 #VERTEX_DEVIATION_RADIUS		15.0							//circle radius, containing actual vertex
-
-
-//Movement Settings
-#START_VELOCITY_ANGLE_SPAN		0.15							//starting velocity will be misdirected in the angle range [-START_VELOCITY_ANGLE_SPAN, START_VELOCITY_ANGLE_SPAN]
-#START_VELOCITY_RANGE			4.0		7.0						//start velocity absolute value
 
 
 #END

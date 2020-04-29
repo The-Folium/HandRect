@@ -3,10 +3,7 @@
 #include "Math.h"
 #include <string>
 
-Edge::Edge(std::string filename, Range<sf::Vector2f> TL, Range<sf::Vector2f> BR, float v_rad, float vel_angle_rng, Range<float> vel_rng, bool debug_md) :
-    vertex_deviation_radius{ v_rad }, velocity_angle_range{vel_angle_rng}, velocity_range(vel_rng),
-    mersenne{ static_cast<std::mt19937::result_type>(std::time(nullptr)) },
-    debug_mode{debug_md}
+Edge::Edge(std::string filename, Settings& data) : mersenne{ static_cast<std::mt19937::result_type>(std::time(nullptr)) }    
 {    
     settings.open(filename);
     std::string key{""};
@@ -30,17 +27,28 @@ Edge::Edge(std::string filename, Range<sf::Vector2f> TL, Range<sf::Vector2f> BR,
                 settings >> a >> b >> c >> d;
                 bottom_right = Range<sf::Vector2f>(sf::Vector2f(a, b), sf::Vector2f(c, d));
             }
-            if (key == "VERTEX_DEVIATION_RADIUS") {
-                settings >> vertex_deviation_radius;
-            }
-            if (key == "START_VELOCITY_ANGLE_SPAN") {
-                
-            }
-
+            if (key == "VERTEX_DEVIATION_RADIUS") {settings >> vertex_deviation_radius; }
+            if (key == "DEBUG_MODE") { settings >> debug_mode; }
+            if (key == "VELOCITY_MULTIPLIER_RANGE") { settings >> a >> b; velocity_multiplier_range = Range<float>(a, b); }
+            if (key == "MOVEMENT_RESISTANCE_RANGE") { settings >> a >> b; movement_resistance_range = Range<float>(a, b); }
+            if (key == "TARGET_REACH_ACCURACY_RANGE") { settings >> a >> b; target_reach_accuracy_range = Range<float>(a, b); }
+            if (key == "DEVIATION_PROBABILITY") { settings >> deviation_probability; }
+            if (key == "DEVIATION_PARAMETER") { settings >> deviation_parameter; }
+            if (key == "START_VELOCITY_ANGLE_SPAN") { settings >> velocity_angle_range; }
+            if (key == "START_VELOCITY_RANGE") { settings >> a >> b; velocity_range = Range<float>(a, b); }
+            if (key == "THICKNESS") { settings >> thickness; }
+            if (key == "FILE_OUTPUT") { settings >> data.file_output; }
+            if (key == "JSON_FILENAME") { settings >> data.json_filename; }
+            if (key == "SAMPLE_FILENAME_PREFIX") { settings >> data.sample_filename_prefix; }
+            if (key == "SAMPLE_NUMBER") { settings >> data.sample_number; }
+            if (key == "PADDING") { settings >> padding; }
+            if (key == "INK_COLOR_RGB") { settings >> a >> b >> c; ink = sf::Color(a, b, c); }
+            if (key == "BACKGROUND_COLOR_RGB") { settings >> a >> b >> c; paper = sf::Color(a, b, c); }
         }
-        std::cout << "\n " << key;
+        std::cout << "\n " << key << " loaded";
         
     }
+    left = right = top = bottom = 250;
 }
 
 float Edge::getRandom(float min, float max)
@@ -97,28 +105,34 @@ void Edge::generate_parameters()
     starting_velocity = sf::Vector2f(abs_velocity * std::cosf(velocity_angle_range+direction), abs_velocity * std::sinf(velocity_angle_range+direction));
 
     //generate key vars
-    velocity_multiplier = getRandom(0.001f, 0.01f);
-    float max_resistance{ 0.93f };
-    //std::min(0.006f/velocity_multiplier,0.93f)
-    movement_resistance = getRandom(0.88f, 0.92f);
-    target_reach_accuracy = getRandom(18.0f, 25.0f);
+    velocity_multiplier = getRandom(velocity_multiplier_range.min, velocity_multiplier_range.max);
+    movement_resistance = getRandom(movement_resistance_range.min, movement_resistance_range.max);
+    target_reach_accuracy = getRandom(target_reach_accuracy_range.min, target_reach_accuracy_range.max);
 
 }
 
-void Edge::render(sf::RenderWindow& window)
+void Edge::render_debug(sf::RenderWindow& window)
 {
     //window setup   
     sf::CircleShape point(thickness);
-    point.setFillColor(sf::Color::Green);
+    point.setFillColor(sf::Color::Blue);
 
     for (int i{ 0 }; i < 4; ++i)
     {        
         point.setPosition(vertices[i]);
         window.draw(point);
     }
+
+    sf::RectangleShape rect(sf::Vector2f(right - left + thickness+2*padding, bottom - top + thickness+2*padding));
+    rect.setPosition(left-padding, top-padding);
+    rect.setOutlineColor(sf::Color::Green);
+    rect.setOutlineThickness(2);
+    rect.setFillColor(sf::Color::Transparent);
+    window.draw(rect);
+
 }
 
-void Edge::create_edge(sf::RenderWindow& window)
+void Edge::create_edge(sf::RenderWindow& window, Settings& data)
 {
     //reset vars
     way_passed = 0;
@@ -128,7 +142,11 @@ void Edge::create_edge(sf::RenderWindow& window)
     generate_order();
     generate_parameters();    
     simulate_pen_movement(window);
-    
+
+    data.outline_coords.x = left-padding;
+    data.outline_coords.y = top-padding;
+    data.outline_height = bottom - top + thickness+2*padding;
+    data.outline_width = right - left + thickness+2*padding;
 }
 
 void Edge::generate_order()
@@ -147,6 +165,11 @@ void Edge::generate_order()
 
 void Edge::draw_line(sf::RenderWindow& window)
 {
+    if (position.x > right) { right = position.x; }
+    if (position.x < left) { left = position.x; }
+    if (position.y > bottom) { bottom = position.y; }
+    if (position.y < top) { top = position.y; }
+
     sf::CircleShape point(thickness);
     point.setFillColor(ink);
 
@@ -158,8 +181,8 @@ void Edge::draw_line(sf::RenderWindow& window)
         point.setPosition(previous_position+delta*static_cast<float>(i));
         window.draw(point);
     }
-    //window.display();
-    //if (way_tracking) { way_passed += abs(translation_vector); }
+    
+    if (way_tracking) { way_passed += abs(translation_vector); }
 
 }
 
@@ -173,14 +196,17 @@ void Edge::draw_point(sf::RenderWindow& window)
 
 void Edge::simulate_pen_movement(sf::RenderWindow& window)
 {
+    std::cout << "\nActual settings:\n";
     std::cout << "velocity multiplier = " << velocity_multiplier << "\n";
     std::cout << "movement_resistance = " << movement_resistance << "\n";
     std::cout << "target_reach_accuracy = " << target_reach_accuracy << "\n";
-    std::cout << "k = " << velocity_multiplier * movement_resistance << "        0.006/v = " << 0.006 / velocity_multiplier << "\n";
+  
     
     //init
     previous_position = position = starting_point;
-    
+    left = right = position.x;
+    top = bottom = position.y;
+
     velocity = starting_velocity;
     current_target = 0;
     window.clear(paper);
@@ -195,22 +221,16 @@ void Edge::simulate_pen_movement(sf::RenderWindow& window)
 
     while (true)
     {
-        if (debug_mode) { render(window); }
+        
 
         //draw point
         
-        window.display();
+        //window.display();
 
         //new position
 
         position += velocity;//semi-Euler
-        
-        draw_line(window);
-        //draw_point(window);
-
-        sf::Vector2f translation_vector{ position - previous_position };
-        if (way_tracking) { way_passed += abs(translation_vector); }
-
+        draw_line(window);        
         previous_position = position;
         
 
@@ -219,9 +239,9 @@ void Edge::simulate_pen_movement(sf::RenderWindow& window)
         velocity += velocity_multiplier*diff;
         velocity *= movement_resistance;
         velocity += deviation;
-        //velocity = unitVector(velocity);
         
-        if (randomEvent(0.004f)) { deviation = sf::Vector2f(getRandom(-abs(velocity)*deviation_parameter, abs(velocity) * deviation_parameter),
+        
+        if (randomEvent(deviation_probability)) { deviation = sf::Vector2f(getRandom(-abs(velocity)*deviation_parameter, abs(velocity) * deviation_parameter),
                                                             getRandom(-abs(velocity) * deviation_parameter, abs(velocity) * deviation_parameter)); }
         deviation *= 0.8f;
 
@@ -231,6 +251,11 @@ void Edge::simulate_pen_movement(sf::RenderWindow& window)
         if (way_passed >= 0.7 * (vertices[2].x - vertices[0].x)) { break; }
         
     }
+    if (debug_mode)
+    {
+        render_debug(window);
+    }
     window.display();
 }
+
 

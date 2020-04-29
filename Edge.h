@@ -9,6 +9,18 @@
 
 const float pi = 3.14159f;
 
+struct Settings
+{
+    std::string json_filename;
+    std::string sample_filename_prefix;
+    int sample_number;
+    bool file_output;
+    bool debug_mode;
+    sf::Vector2f outline_coords;
+    float outline_width;
+    float outline_height;
+};
+
 template<typename T>
 struct Range
 {
@@ -33,6 +45,8 @@ class Edge
     Range<sf::Vector2f> bottom_right;
     float vertex_deviation_radius;
     bool debug_mode{ false };
+    float left, right, top, bottom;
+    float padding;
 
 
     //Starting Position
@@ -48,9 +62,14 @@ class Edge
     OrderMode order_mode{ UpRight };
     float velocity_angle_range;
     Range<float> velocity_range;
+    Range<float> velocity_multiplier_range;
+    Range<float> movement_resistance_range;
+    Range<float> target_reach_accuracy_range;
+    float deviation_probability;
+
     float way_passed{ 0 };
     bool way_tracking{ false };
-    float deviation_parameter{ 0.1 };
+    float deviation_parameter{ 0.1f };
 
     float velocity_multiplier;
     float movement_resistance;
@@ -70,20 +89,24 @@ class Edge
     sf::Vector2f velocity;
     int current_target;
 
+    //Filesystem vars
     std::ifstream settings;
+    
+    //Data Exchange
+    
     
 
 public:
-    Edge(std::string filename, Range<sf::Vector2f> TL, Range<sf::Vector2f> BR, float v_rad, float vel_angle_rng, Range<float> vel_rng, bool debug_md);
+    Edge(std::string filename, Settings& data);
     float getRandom(float min, float max);
     bool randomEvent(float probability);
     void generate_parameters();
-    void render(sf::RenderWindow& window);
+    void render_debug(sf::RenderWindow& window);
     void generate_order();
     void draw_line(sf::RenderWindow& window);   
     void draw_point(sf::RenderWindow& window);
     void simulate_pen_movement(sf::RenderWindow& window);
-    void create_edge(sf::RenderWindow& window);
+    void create_edge(sf::RenderWindow& window, Settings& data);
     
     friend class Pen;
 };
