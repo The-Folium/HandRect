@@ -19,6 +19,8 @@ struct Settings
     sf::Vector2f outline_coords;
     float outline_width;
     float outline_height;
+    sf::Vector2i sample_resolution;
+    int antialiasing_level;
 };
 
 template<typename T>
@@ -65,7 +67,14 @@ class Edge
     Range<float> velocity_multiplier_range;
     Range<float> movement_resistance_range;
     Range<float> target_reach_accuracy_range;
+    Range<float> start_position_range;
+    Range<float> overlap_value_range;
+    float start_position_coefficient;
+    float overlap_parameter;
+    float overlap_value;
     float deviation_probability;
+    float closed_probability;
+    int period{ 4 };
 
     float way_passed{ 0 };
     bool way_tracking{ false };
@@ -105,7 +114,7 @@ public:
     void generate_order();
     void draw_line(sf::RenderWindow& window);   
     void draw_point(sf::RenderWindow& window);
-    void simulate_pen_movement(sf::RenderWindow& window);
+    void simulate_pen_movement(sf::RenderWindow& window, Settings& data);
     void create_edge(sf::RenderWindow& window, Settings& data);
     
     friend class Pen;

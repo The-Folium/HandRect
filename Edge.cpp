@@ -10,7 +10,7 @@ Edge::Edge(std::string filename, Settings& data) : mersenne{ static_cast<std::mt
     while (key != "END")
     {
         char ch{ 0 };
-        float a, b, c, d;
+        float arg1, arg2, arg3, arg4;
         while (ch != '#')
         {
             settings >> ch;
@@ -20,30 +20,35 @@ Edge::Edge(std::string filename, Settings& data) : mersenne{ static_cast<std::mt
         if (key != "END")
         {
             if (key == "TOP_LEFT") {
-                settings >> a >> b >> c >> d;
-                top_left = Range<sf::Vector2f>(sf::Vector2f(a, b), sf::Vector2f(c, d));
+                settings >> arg1 >> arg2 >> arg3 >> arg4;
+                top_left = Range<sf::Vector2f>(sf::Vector2f(arg1, arg2), sf::Vector2f(arg3, arg4));
             }
             if (key == "BOTTOM_RIGHT") {
-                settings >> a >> b >> c >> d;
-                bottom_right = Range<sf::Vector2f>(sf::Vector2f(a, b), sf::Vector2f(c, d));
+                settings >> arg1 >> arg2 >> arg3 >> arg4;
+                bottom_right = Range<sf::Vector2f>(sf::Vector2f(arg1, arg2), sf::Vector2f(arg3, arg4));
             }
             if (key == "VERTEX_DEVIATION_RADIUS") {settings >> vertex_deviation_radius; }
             if (key == "DEBUG_MODE") { settings >> debug_mode; }
-            if (key == "VELOCITY_MULTIPLIER_RANGE") { settings >> a >> b; velocity_multiplier_range = Range<float>(a, b); }
-            if (key == "MOVEMENT_RESISTANCE_RANGE") { settings >> a >> b; movement_resistance_range = Range<float>(a, b); }
-            if (key == "TARGET_REACH_ACCURACY_RANGE") { settings >> a >> b; target_reach_accuracy_range = Range<float>(a, b); }
+            if (key == "VELOCITY_MULTIPLIER_RANGE") { settings >> arg1 >> arg2; velocity_multiplier_range = Range<float>(arg1, arg2); }
+            if (key == "MOVEMENT_RESISTANCE_RANGE") { settings >> arg1 >> arg2; movement_resistance_range = Range<float>(arg1, arg2); }
+            if (key == "TARGET_REACH_ACCURACY_RANGE") { settings >> arg1 >> arg2; target_reach_accuracy_range = Range<float>(arg1, arg2); }
             if (key == "DEVIATION_PROBABILITY") { settings >> deviation_probability; }
             if (key == "DEVIATION_PARAMETER") { settings >> deviation_parameter; }
             if (key == "START_VELOCITY_ANGLE_SPAN") { settings >> velocity_angle_range; }
-            if (key == "START_VELOCITY_RANGE") { settings >> a >> b; velocity_range = Range<float>(a, b); }
+            if (key == "START_VELOCITY_RANGE") { settings >> arg1 >> arg2; velocity_range = Range<float>(arg1, arg2); }
+            if (key == "START_POSITION_RANGE") { settings >> arg1 >> arg2; start_position_range = Range<float>(arg1, arg2); }
             if (key == "THICKNESS") { settings >> thickness; }
             if (key == "FILE_OUTPUT") { settings >> data.file_output; }
             if (key == "JSON_FILENAME") { settings >> data.json_filename; }
             if (key == "SAMPLE_FILENAME_PREFIX") { settings >> data.sample_filename_prefix; }
             if (key == "SAMPLE_NUMBER") { settings >> data.sample_number; }
             if (key == "PADDING") { settings >> padding; }
-            if (key == "INK_COLOR_RGB") { settings >> a >> b >> c; ink = sf::Color(a, b, c); }
-            if (key == "BACKGROUND_COLOR_RGB") { settings >> a >> b >> c; paper = sf::Color(a, b, c); }
+            if (key == "INK_COLOR_RGB") { settings >> arg1 >> arg2 >> arg3; ink = sf::Color(static_cast<sf::Uint8>(arg1), static_cast<sf::Uint8>(arg2), static_cast<sf::Uint8>(arg3)); }
+            if (key == "BACKGROUND_COLOR_RGB") { settings >> arg1 >> arg2 >> arg3; paper = sf::Color(static_cast<sf::Uint8>(arg1), static_cast<sf::Uint8>(arg2), static_cast<sf::Uint8>(arg3)); }
+            if (key == "SAMPLE_RESOLUTION") { settings >> arg1 >> arg2; data.sample_resolution = sf::Vector2i(static_cast<int>(arg1), static_cast<int>(arg2)); }
+            if (key == "ANTIALIASING_LEVEL") { settings >> data.antialiasing_level; }
+            if (key == "OVERLAP_VALUE_RANGE") { settings >> arg1 >> arg2; overlap_value_range = Range<float>(arg1, arg2); }
+          
         }
         std::cout << "\n " << key << " loaded";
         
@@ -64,13 +69,14 @@ bool Edge::randomEvent(float probability)
 
 void Edge::generate_parameters()
 {
+    
+
     //generating circle centers
     vertices_position[0] = sf::Vector2f(getRandom(top_left.min.x, top_left.max.x), getRandom(top_left.min.y, top_left.max.y));
     vertices_position[1] = sf::Vector2f(getRandom(bottom_right.min.x, bottom_right.max.x), vertices_position[0].y);
     vertices_position[2] = sf::Vector2f(vertices_position[1].x, getRandom(bottom_right.min.y, bottom_right.max.y));
     vertices_position[3] = sf::Vector2f(vertices_position[0].x, vertices_position[2].y);
-
-   
+    
 
     //generating vertices
     for(int i{ 0 }; i < 4; ++i)
@@ -85,16 +91,26 @@ void Edge::generate_parameters()
     
 
     //generating starting point
+    start_position_coefficient = getRandom(start_position_range.min, start_position_range.max);
+    overlap_value = getRandom(overlap_value_range.min, overlap_value_range.max);
+
     if ((order_mode == UpRight) || (order_mode == UpLeft))
     {
-        starting_point.x = 0.5f * (vertices[0].x + vertices[1].x);
-        starting_point.y = 0.5f * (vertices[0].y + vertices[1].y);
+        starting_point.x = start_position_coefficient * vertices[0].x + (1.0f - start_position_coefficient) * vertices[1].x;
+        starting_point.y = start_position_coefficient * vertices[0].y + (1.0f - start_position_coefficient) * vertices[1].y;
     }
     if ((order_mode == DownRight) || (order_mode == DownLeft))
     {
-        starting_point.x = 0.5f * (vertices[2].x + vertices[3].x);
-        starting_point.y = 0.5f * (vertices[2].y + vertices[3].y);
+        starting_point.x = start_position_coefficient * vertices[2].x + (1.0f - start_position_coefficient) * vertices[3].x;
+        starting_point.y = start_position_coefficient * vertices[2].y + (1.0f - start_position_coefficient) * vertices[3].y;
     }
+
+    if ((order_mode == UpRight) || (order_mode == DownLeft)) { overlap_parameter = 1.0f + overlap_value - start_position_coefficient; }
+    if ((order_mode == UpLeft) || (order_mode == DownRight)) { overlap_parameter = start_position_coefficient + overlap_value; }
+
+
+    
+
 
     //generating basic velocity
     float abs_velocity = getRandom(velocity_range.min, velocity_range.max);
@@ -109,6 +125,7 @@ void Edge::generate_parameters()
     movement_resistance = getRandom(movement_resistance_range.min, movement_resistance_range.max);
     target_reach_accuracy = getRandom(target_reach_accuracy_range.min, target_reach_accuracy_range.max);
 
+    
 }
 
 void Edge::render_debug(sf::RenderWindow& window)
@@ -141,7 +158,7 @@ void Edge::create_edge(sf::RenderWindow& window, Settings& data)
     //execute
     generate_order();
     generate_parameters();    
-    simulate_pen_movement(window);
+    simulate_pen_movement(window, data);
 
     data.outline_coords.x = left-padding;
     data.outline_coords.y = top-padding;
@@ -194,12 +211,17 @@ void Edge::draw_point(sf::RenderWindow& window)
     window.draw(point);    
 }
 
-void Edge::simulate_pen_movement(sf::RenderWindow& window)
+void Edge::simulate_pen_movement(sf::RenderWindow& window, Settings& data)
 {
-    std::cout << "\nActual settings:\n";
-    std::cout << "velocity multiplier = " << velocity_multiplier << "\n";
-    std::cout << "movement_resistance = " << movement_resistance << "\n";
-    std::cout << "target_reach_accuracy = " << target_reach_accuracy << "\n";
+    if (!data.file_output)
+    {
+        std::cout << "\nActual settings:\n";
+        std::cout << "velocity multiplier = " << velocity_multiplier << "\n";
+        std::cout << "movement_resistance = " << movement_resistance << "\n";
+        std::cout << "target_reach_accuracy = " << target_reach_accuracy << "\n";
+        std::cout << "start_position_coef = " << start_position_coefficient << "\n";
+        std::cout << "overlap_parameter = " << overlap_parameter << "\n";
+    }
   
     
     //init
@@ -235,7 +257,7 @@ void Edge::simulate_pen_movement(sf::RenderWindow& window)
         
 
 
-        sf::Vector2f diff(vertices[order[current_target % 4]] - position);
+        sf::Vector2f diff(vertices[order[current_target % period]] - position);
         velocity += velocity_multiplier*diff;
         velocity *= movement_resistance;
         velocity += deviation;
@@ -245,17 +267,22 @@ void Edge::simulate_pen_movement(sf::RenderWindow& window)
                                                             getRandom(-abs(velocity) * deviation_parameter, abs(velocity) * deviation_parameter)); }
         deviation *= 0.8f;
 
-        if (abs(diff) < target_reach_accuracy) { ++current_target;  }
+        if (abs(diff) < target_reach_accuracy) { ++current_target; }
 
-        if (current_target == 4) { way_tracking = true; }
-        if (way_passed >= 0.7 * (vertices[2].x - vertices[0].x)) { break; }
+        if ((current_target == period) && (way_tracking == false)) 
+        { 
+            way_tracking = true;           
+            deviation_probability = 0;
+        }
+
+        if (way_passed >= overlap_parameter * (vertices[2].x - vertices[0].x)) { break; }
         
     }
     if (debug_mode)
     {
         render_debug(window);
     }
-    window.display();
+    
 }
 
 
